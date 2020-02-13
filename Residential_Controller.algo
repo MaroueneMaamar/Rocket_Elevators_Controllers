@@ -1,1 +1,151 @@
+                                                "//          Residential_Controller.algo            //"
 
+User ( User_Position , User_Direction ["Up" , "Down"] , User_Stop )
+Elevator Elevator  ( Elevator , Elevator_Position , Elevator_Direction ["Up" , "Down", "Rest"] , Elevator_Stops Array[10] )
+List_Elevators  Array  [Elevator] 
+
+SEQUENCE Open_Door
+        Door = Open         
+ENDSEQUENCE
+
+SEQUENCE Close_Door
+        Doors = Close 
+ENDSEQUENCE
+
+SEQUENCE Add_Stop USING Elevator_Stops,User_Position
+    SET Elevator_Stops (User_Position) TO 1    
+ENDSEQUENCE
+
+SEQUENCE Remove_Stop USING Elevator_Stops, Elevator_Position ,Elevator_Direction 
+    SET Elevator_Stops (Elevator_Position) TO 0           "// Remplacer le 1 de la position actuelle de l'elevateur dans Elevator_Stops par 0 //"
+    CASE Elevator_Direction OF
+        UP :    SET OtherStopsUP TO FALSE                           "// Chercher si l'elevateur a d'autres stop dans la direction UP //"
+                SET i TO Elevator_Position
+                WHILE i < Length(Elevator_Stops) AND OtherStopsUP = FALSE DO
+                    INCREMENT i 
+                    IF Elevator_Stops[i] = 1 THEN 
+                        SET OtherStopsUP TO TRUE
+                    END IF
+                END WHILE
+                
+                SET OtherStopsDOWN TO FALSE                         "// Chercher si l'elevateur a d'autres stop dans la direction DOWN //"
+                SET j TO Elevator_Position
+                WHILE j > 1 AND OtherStopsDOWN = FALSE DO
+                    DECREMENT j 
+                    IF Elevator_Stops[j]= 1 THEN 
+                        SET OtherStopsDOWN TO TRUE
+                    END IF
+                END WHILE
+
+                IF OtherStopsUP = TRUE THEN                         "// Changer la direction de l'elevateur selon les prochains stops //"
+                    SET Elevator_Direction TO "UP"
+                    ELSE IF OtherStopsDOWN = TRUE THEN 
+                        SET Elevator_Direction TO "DOWN"    
+                        ELSE 
+                            SET Elevator_Direction TO "Rest"
+                END IF
+                    
+        DOWN :  SET OtherStopsDOWN TO FALSE                         "// Chercher si l'elevateur a d'autres stop dans la direction DOWN//"
+                SET j TO Elevator_Position
+                WHILE j > 1 AND OtherStopsDOWN = FALSE DO
+                    DECREMENT j 
+                    IF Elevator_Stops[j]= 1 THEN 
+                        SET OtherStopsDOWN TO TRUE
+                    END IF
+                END WHILE
+                
+                SET OtherStopsUP TO FALSE                           "// Chercher si l'elevateur a d'autres stop dans la direction UP//"
+                SET i TO Elevator_Position
+                WHILE i < Length(Elevator_Stops) AND OtherStopsUP = FALSE DO
+                    INCREMENT i 
+                    IF Elevator_Stops[i]= 1 THEN 
+                        SET OtherStopsUP TO TRUE
+                    END IF 
+                END WHILE
+                
+                IF OtherStopsDOWN = TRUE THEN                       "// Changer la direction de l'elevateur selon les prochains stops //"
+                    SET Elevator_Direction TO "DOWN"
+                    ELSE IF OtherStopsUP = TRUE THEN 
+                        SET Elevator_Direction TO "UP"    
+                        ELSE 
+                            SET Elevator_Direction TO "Rest"
+                END IF
+    ENDCASE    
+ENDSEQUENCE
+
+
+SEQUENCE Find_Elevator USING User_Position , User_Direction 
+  SET Best_Elevator TO the first Elevator on List_Elevators                                               "// Supposons que elevateur 1 est le Best_Elevator //"  
+  FOR EACH Elevator ON List_Elevators start by the second Elevator on List_Elevators
+    IF Elevator_Direction = User_Direction OR Elevator_Direction = "Rest"   THEN                          "// Meme Direction OU Elevator en Repos//"
+        CASE User_Direction of 
+        UP :    IF User_Position = Elevator_Position  THEN                                                            "// Elevator&User dans la meme position//"
+    	                SET Best_Elevator TO Elevator
+                        return Best_Elevator
+                END IF
+                IF User_Position > Elevator_Position AND User_Position > Best_Elevator_Position  THEN                 "// Elevator/Best_Elevator - User  //"
+                        SET Best_Elevator TO the closest Elevator                                                              
+                    ELSE IF User_Position < Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// User - Elevator/Best_Elevator //"
+                        SET Best_Elevator TO the closest Elevator                                             
+                    ELSE IF User_Position > Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// Ordre: Elevator - User - Best_Elevator //" 
+                        SET Best_Elevator TO Elevator                                                                 
+                END IF                              
+        DOWN:     IF (User_Position == Elevator_Position ) THEN                                                                  "// Elevator&User dans la meme position //"
+    	                Best_Elevator = Elevator
+                        return Best_Elevator
+                    END IF
+                    IF (User_Position < Elevator_Position) AND (User_Position < Best_Elevatorlevator_Position) THEN              "// User - Elevator/Best_Elevator //"
+                        SET Best_Elevator TO the closest Elevator
+                        ELSE IF (User_Position > Elevator_Position) AND (User_Position > Best_Elevatorlevator_Position) THEN     "// Elevator/Best_Elevator - User //"
+                            SET Best_Elevator TO the closest Elevator
+                        ELSE IF (User_Position < Elevator_Position) AND (User_Position > Best_Elevatorlevator_Position) THEN     "// Ordre: Best_Elevator - User - Elevator //"
+                            SET Best_Elevator TO Elevator
+                    END IF
+        ENDCASE
+    END IF
+  END FOR 
+  Return Best_Elevator ; 
+ENDSEQUENCE
+
+SEQUENCE Move_Elevator USING Elevator_Position , Elevator_Stops , Elevator_Direction
+        IF Elevator_Direction = "Rest" THEN 
+            IF Elevator_PositionElevator_Position < User_Position THEN 
+                SET Elevator_Direction TO "UP"
+                ELSE IF Elevator_PositionElevator_Position > User_Position THEN
+                    SET Elevator_Direction TO "DOWN"
+            END IF
+        ELSE
+
+        CASE Elevator_Direction of 
+        "UP":
+                REPEAT  
+                    INCREMENT Elevator_Position 
+                Until Elevator_Stops (Elevator_Position) = 1 
+                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
+        "DOWN":
+                REPEAT 
+                    DECREMENT Elevator_Position 
+                Until Elevator_Stops (Elevator_Position) = 1  
+                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
+        ENDCASE
+ENDSEQUENCE
+
+
+                    *** PROGRAM ***
+
+While POWER_ON DO
+    IF Call_Botton Pressed ( User_Position , User_Direction) THEN   
+        CALL Find_Elevator WITH  User_Position , User_Direction 
+        CALL Add_Stop WITH Elevator , Elevator_Stops , User_Position 
+        CALL Move_Elevator WITH Elevator , Elevator_Stops, Elevator_Direction
+        CALL Open_Door 
+        CALL Close_Door 
+    END IF    
+    IF Floor_request_buttons Pressed THEN
+            READ User_Stop
+            CALL Add_Stop WITH Elevator , Elevator_Stops , User_Stop
+    END IF     
+    CALL Move_Elevator  WITH Elevator , Elevator_Stops, Elevator_Direction      
+END WHILE
+
+ 
