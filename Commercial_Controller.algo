@@ -1,0 +1,144 @@
+                                                "//          Commercial_Controller.algo            //"
+
+'-- Sequence qui ouvre les portes de l'Elevateur --'
+SEQUENCE Open_Door
+        Door = Open         
+ENDSEQUENCE
+
+'-- Sequence qui ferme les portes de l'Elevateur --'
+SEQUENCE Close_Door
+        Doors = Close 
+ENDSEQUENCE
+
+'-- Sequence qui ajoute un stop dans la liste des stops d'un Elevateur --'
+SEQUENCE Add_Stop USING Elevator_Stops,User_Position
+    SET Elevator_Stops (User_Position) TO 1    
+ENDSEQUENCE
+
+'-- Sequence qui initialise : nbr colonnes , nbr etages , nbr basements --'
+SEQUENCE Init_INFO
+    SET nb_Columns    To 4
+    SET nb_Floors     To 66
+    SET nb_Basements  To 6    
+ENDSEQUENCE
+
+'-- Sequence qui assigne les etages aux colonnes et etages adequats--'
+SEQUENCE Add_Floors_To_Lists USING List_Columns , List_Botton_Elevator
+    FOR i FROM 0 TO -nb_Basements DO
+        First Column ON List_Columns 
+        Add i TO List_Floors_Colomn
+        First Elevator ON List_Elevator 
+        Add i TO List_Floors_Elevator
+    END FOR         
+    FOR i : 1 TO nb_Floors-nb_Basements / nb_Columns-1 DO
+
+    END FOR
+ENDSEQUENCE
+
+'-- Sequence qui ajoute les colonnes a la liste des colonnes et leur assigne des noms Id [A,B,C,D..] --'
+SEQUENCE Init_List_Columns USING nb_Columns
+    SET id ON [ "A" .. "Z" ]
+    SET i TO 1
+    WHILE i < nb_Columns 
+        Add Colomn TO List_Columns 
+        SET Colomn_Id TO id [ i ]
+        INCREMENT i
+        CALL Add_Floors_To_Lists WITH List_Columns
+
+
+    END WHILE    
+ENDSEQUENCE
+
+
+'-- Sequence qui retourne la liste des elevateurs qui peuvent effectuer la demande --'
+SEQUENCE Find_Concerned_Elevator USING User_Position , User_Direction , User_Stop
+    INIT Concerned_Elvators AS Empty List 
+    IF User_Position = 0 THEN                               '-- User au RDC --' 
+        FOR EACH Elevator ON List_Elevator DO
+            IF User_Direction EXIST ON List_Botton_Elevator THEN
+                Add Elevator TO Concerned_Elvators 
+            ENDIF
+        END FOR EACH
+    ELSE                                                   '-- User n'est pas au RDC --'             
+        FOR EACH Elevator ON List_Elevator DO
+            IF User_Position EXIST ON List_Botton_Elevator THEN
+                Add Elevator TO Concerned_Elvators 
+            ENDIF
+        END FOR EACH
+    ENDIF
+    Return Concerned_Elvators
+ENDSEQUENCE
+
+'-- Sequence qui calcul la distance entre l'elevateur et l'etage demandé --'
+SEQUENCE Calcul_Distance USING User_Position , User_Direction , User_Stop , Elevator_Direction , Elevator_Position
+    CASE User_Position OF:
+        0 :     IF  User_Position = Elevator_Position THEN
+                    Return 0 
+                ELSE IF 
+                    User_Direction = "UP" AND Elevator_Direction = "DOWN" THEN
+                    Return Elevator_Position
+                ELSE IF
+                    User_Direction = "UP" AND Elevator_Direction = "UP" THEN
+                    Return (Last_Stop_UP - Elevator_Position) + Last_Stop_UP
+                ELSE IF 
+                    User_Direction = "DOWN" AND Elevator_Direction = "UP" THEN
+                    Return ABS(Elevator_Position)
+                ELSE IF
+                    User_Direction = "DOWN" AND Elevator_Direction = "DOWN" THEN
+                    Return ABS(Last_Stop_DOWN) - ABS(Elevator_Position) + ABS(Last_Stop_DOWN)
+                ENDIF
+        >0 :    IF User_Position = Elevator_Position AND Elevator_Direction = "DOWN" OR "Rest"  THEN
+                    Return 0 
+                ELSE IF 
+                    Elevator_Direction = "DOWN" AND User_Position < Elevator_Position THEN
+                    Return Elevator_Position - User_Position
+                ELSE IF
+                    Elevator_Direction = "DOWN" AND User_Position > Elevator_Position THEN
+                    Return Elevator_Position + User_Position
+                ELSE IF
+                    Elevator_Direction = "UP" AND User_Position < Elevator_Position THEN
+                    Return (Last_Stop_UP - Elevator_Position) + (Last_Stop_UP - User_Position)
+                ELSE IF
+                    Elevator_Direction = "UP" AND User_Position > Elevator_Position THEN
+                    Return (Last_Stop_UP - Elevator_Position) + (Last_Stop_UP + User_Position)
+                ENDIF
+        <0 :    IF User_Position = Elevator_Position AND Elevator_Direction = "UP" OR "Rest"  THEN
+                    Return 0 
+                 ELSE IF 
+                    Elevator_Direction = "UP" AND User_Position > Elevator_Position THEN
+                    Return ABS(Elevator_Position) - ABS(User_Position)
+                ELSE IF
+                    Elevator_Direction = "UP" AND User_Position < Elevator_Position THEN
+                    Return ABS(Elevator_Position) + ABS(User_Position)
+                ELSE IF
+                    Elevator_Direction = "DOWN" AND User_Position > Elevator_Position THEN
+                    Return ABS(Last_Stop_DOWN) - ABS(Elevator_Position) + ABS(Last_Stop_DOWN) - ABS(User_Position) 
+                ELSE IF 
+                    Elevator_Direction = "DOWN" AND User_Position < Elevator_Position THEN
+                    Return ABS(Last_Stop_DOWN) - ABS(Elevator_Position) + ABS(Last_Stop_DOWN) + ABS(User_Position)
+                ENDIF
+ENDSEQUENCE
+
+'--  Sequence qui retourne le meilleur elevateur   --'
+SEQUENCE Find_Nearest_Elevator USING User_Position , User_Direction , User_Stop 
+    CALL Find_Concerned_Elevator WITH User_Position , User_Direction , User_Stop 
+    INIT All_Distances AS Empty List
+    FOR EACH Elevator ON Concerned_Elvators DO       
+        Distance = CALL Calcul_Distance WITH User_Position , User_Direction , User_Stop , Elevator_Direction , Elevator_Position
+        Add Distance TO All_Distances
+    END FOR
+    Return Elevator with MINIMUM Distance ON All_Distances
+ENDSEQUENCE
+
+                    *** PROGRAM ***
+
+While POWER_ON DO
+    IF Call_Botton Pressed ( User_Position , User_Direction, User_Stop) THEN   
+        CALL Find_Nearest_Elevator WITH  User_Position , User_Direction , User_Stop 
+        CALL Add_Stop WITH Elevator , User_Position , User_Stop
+        CALL Move_Elevator WITH Elevator , Elevator_Stops, Elevator_Direction
+        CALL Open_Door 
+        CALL Close_Door 
+        CALL Move_Elevator WITH Elevator , Elevator_Stops, Elevator_Direction
+    END IF       
+END WHILE
