@@ -1,21 +1,25 @@
-                                                "//          Residential_Controller.algo            //"
+                              "//          Residential_Controller.algo            //"
 
 User ( User_Position , User_Direction ["Up" , "Down"] , User_Stop )
-Elevator Elevator  ( Elevator , Elevator_Position , Elevator_Direction ["Up" , "Down", "Rest"] , Elevator_Stops Array[10] )
-List_Elevators  Array  [Elevator] 
+Elevator  ( Elevator_Position , Elevator_Direction ["Up" , "Down", "Rest"] , Elevator_Stops Array[10] "0 / 1" )
+List_Elevators  Array  [2] Elevateur
 
-SEQUENCE Open_Door
-        Door = Open         
+SEQUENCE Init_INFO  
+    Init nb_Floors     
+    Init nb_Basements    
 ENDSEQUENCE
 
+'-- Sequence qui ferme les portes de l'Elevateur --'
 SEQUENCE Close_Door
         Doors = Close 
 ENDSEQUENCE
 
-SEQUENCE Add_Stop USING Elevator_Stops,User_Position
-    SET Elevator_Stops (User_Position) TO 1    
+'-- Sequence qui ouvre les portes de l'Elevateur --'
+SEQUENCE Open_Door
+        Door = Open         
 ENDSEQUENCE
 
+'--  Sequence qui permet de supprimer un stop et mettre a jour la direction de l'elevateur  --'
 SEQUENCE Remove_Stop USING Elevator_Stops, Elevator_Position ,Elevator_Direction 
     SET Elevator_Stops (Elevator_Position) TO 0           "// Remplacer le 1 de la position actuelle de l'elevateur dans Elevator_Stops par 0 //"
     CASE Elevator_Direction OF
@@ -73,7 +77,33 @@ SEQUENCE Remove_Stop USING Elevator_Stops, Elevator_Position ,Elevator_Direction
     ENDCASE    
 ENDSEQUENCE
 
+'--  Sequence qui permet de bouger l'elevateur UP/DOWN   --'
+SEQUENCE Move_Elevator USING Elevator_Position , Elevator_Stops , Elevator_Direction
+        IF Elevator_Direction = "Rest" THEN 
+            IF Elevator_Position < User_Position THEN 
+                SET Elevator_Direction TO "UP"
+                ELSE IF Elevator_Position > User_Position THEN
+                    SET Elevator_Direction TO "DOWN"
+            END IF
+        ELSE
+        CASE Elevator_Direction of 
+        "UP":   REPEAT  
+                    INCREMENT Elevator_Position 
+                Until Elevator_Stops (Elevator_Position) = 1 
+                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
+        "DOWN": REPEAT 
+                    DECREMENT Elevator_Position 
+                Until Elevator_Stops (Elevator_Position) = 1  
+                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
+        ENDCASE
+ENDSEQUENCE
 
+'-- Sequence qui ajoute un stop dans la liste des stops d'un Elevateur --'
+SEQUENCE Add_Stop USING Elevator_Stops,User_Position
+    SET Elevator_Stops (User_Position) TO 1    
+ENDSEQUENCE
+
+'--  Sequence qui retourne le meilleur elevateur   --'
 SEQUENCE Find_Elevator USING User_Position , User_Direction 
   SET Best_Elevator TO the first Elevator on List_Elevators                                               "// Supposons que elevateur 1 est le Best_Elevator //"  
   FOR EACH Elevator ON List_Elevators start by the second Elevator on List_Elevators
@@ -84,9 +114,9 @@ SEQUENCE Find_Elevator USING User_Position , User_Direction
                         return Best_Elevator
                 END IF
                 IF User_Position > Elevator_Position AND User_Position > Best_Elevator_Position  THEN                 "// Elevator/Best_Elevator - User  //"
-                        SET Best_Elevator TO the closest Elevator                                                              
+                        SET Best_Elevator TO Elevator                                                              
                     ELSE IF User_Position < Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// User - Elevator/Best_Elevator //"
-                        SET Best_Elevator TO the closest Elevator                                             
+                        SET Best_Elevator TO Elevator                                             
                     ELSE IF User_Position > Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// Ordre: Elevator - User - Best_Elevator //" 
                         SET Best_Elevator TO Elevator                                                                 
                 END IF                              
@@ -95,9 +125,9 @@ SEQUENCE Find_Elevator USING User_Position , User_Direction
                         return Best_Elevator
                     END IF
                     IF (User_Position < Elevator_Position) AND (User_Position < Best_Elevatorlevator_Position) THEN              "// User - Elevator/Best_Elevator //"
-                        SET Best_Elevator TO the closest Elevator
+                        SET Best_Elevator TO Elevator
                         ELSE IF (User_Position > Elevator_Position) AND (User_Position > Best_Elevatorlevator_Position) THEN     "// Elevator/Best_Elevator - User //"
-                            SET Best_Elevator TO the closest Elevator
+                            SET Best_Elevator TO Elevator
                         ELSE IF (User_Position < Elevator_Position) AND (User_Position > Best_Elevatorlevator_Position) THEN     "// Ordre: Best_Elevator - User - Elevator //"
                             SET Best_Elevator TO Elevator
                     END IF
@@ -107,33 +137,10 @@ SEQUENCE Find_Elevator USING User_Position , User_Direction
   Return Best_Elevator ; 
 ENDSEQUENCE
 
-SEQUENCE Move_Elevator USING Elevator_Position , Elevator_Stops , Elevator_Direction
-        IF Elevator_Direction = "Rest" THEN 
-            IF Elevator_PositionElevator_Position < User_Position THEN 
-                SET Elevator_Direction TO "UP"
-                ELSE IF Elevator_PositionElevator_Position > User_Position THEN
-                    SET Elevator_Direction TO "DOWN"
-            END IF
-        ELSE
-
-        CASE Elevator_Direction of 
-        "UP":
-                REPEAT  
-                    INCREMENT Elevator_Position 
-                Until Elevator_Stops (Elevator_Position) = 1 
-                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
-        "DOWN":
-                REPEAT 
-                    DECREMENT Elevator_Position 
-                Until Elevator_Stops (Elevator_Position) = 1  
-                CALL Remove_Stop WITH Elevator_Stops, Elevator_Position, Elevator_Direction
-        ENDCASE
-ENDSEQUENCE
-
-
                     *** PROGRAM ***
 
 While POWER_ON DO
+    CALL Init_INFO
     IF Call_Botton Pressed ( User_Position , User_Direction) THEN   
         CALL Find_Elevator WITH  User_Position , User_Direction 
         CALL Add_Stop WITH Elevator , Elevator_Stops , User_Position 
@@ -141,7 +148,7 @@ While POWER_ON DO
         CALL Open_Door 
         CALL Close_Door 
     END IF    
-    IF Floor_request_buttons Pressed THEN
+    IF Floor_request_buttons Pressed THEN   '-- Une fois dans l'elevateur, Si un bouton d'etage est presse --'
             READ User_Stop
             CALL Add_Stop WITH Elevator , Elevator_Stops , User_Stop
     END IF     
