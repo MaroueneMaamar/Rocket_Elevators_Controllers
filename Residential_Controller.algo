@@ -6,7 +6,7 @@ List_Elevators  Array  [2] Elevateur
 
 SEQUENCE Init_INFO  
     Init nb_Floors     
-    Init nb_Basements    
+    Init nb_Basements
 ENDSEQUENCE
 
 '-- Sequence qui ferme les portes de l'Elevateur --'
@@ -104,22 +104,22 @@ SEQUENCE Add_Stop USING Elevator_Stops,User_Position
 ENDSEQUENCE
 
 '--  Sequence qui retourne le meilleur elevateur   --'
-SEQUENCE Find_Elevator USING User_Position , User_Direction 
+SEQUENCE Find_Elevator USING User_Position , User_Direction
   SET Best_Elevator TO the first Elevator on List_Elevators                                               "// Supposons que elevateur 1 est le Best_Elevator //"  
   FOR EACH Elevator ON List_Elevators start by the second Elevator on List_Elevators
     IF Elevator_Direction = User_Direction OR Elevator_Direction = "Rest"   THEN                          "// Meme Direction OU Elevator en Repos//"
-        CASE User_Direction of 
+        CASE User_Direction of
         UP :    IF User_Position = Elevator_Position  THEN                                                            "// Elevator&User dans la meme position//"
     	                SET Best_Elevator TO Elevator
                         return Best_Elevator
                 END IF
                 IF User_Position > Elevator_Position AND User_Position > Best_Elevator_Position  THEN                 "// Elevator/Best_Elevator - User  //"
-                        SET Best_Elevator TO Elevator                                                              
+                        SET Best_Elevator TO Elevator
                     ELSE IF User_Position < Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// User - Elevator/Best_Elevator //"
-                        SET Best_Elevator TO Elevator                                             
+                        SET Best_Elevator TO Elevator
                     ELSE IF User_Position > Elevator_Position AND User_Position < Best_Elevator_Position THEN         "// Ordre: Elevator - User - Best_Elevator //" 
-                        SET Best_Elevator TO Elevator                                                                 
-                END IF                              
+                        SET Best_Elevator TO Elevator
+                END IF
         DOWN:     IF (User_Position == Elevator_Position ) THEN                                                                  "// Elevator&User dans la meme position //"
     	                Best_Elevator = Elevator
                         return Best_Elevator
@@ -133,26 +133,25 @@ SEQUENCE Find_Elevator USING User_Position , User_Direction
                     END IF
         ENDCASE
     END IF
-  END FOR 
-  Return Best_Elevator ; 
+  END FOR
+  Return Best_Elevator ;
 ENDSEQUENCE
 
                     *** PROGRAM ***
 
 While POWER_ON DO
     CALL Init_INFO
-    IF Call_Botton Pressed ( User_Position , User_Direction) THEN   
-        CALL Find_Elevator WITH  User_Position , User_Direction 
-        CALL Add_Stop WITH Elevator , Elevator_Stops , User_Position 
+    IF Call_Botton Pressed ( User_Position , User_Direction) THEN
+        CALL Find_Elevator WITH  User_Position , User_Direction
+        CALL Add_Stop WITH Elevator , Elevator_Stops , User_Position
         CALL Move_Elevator WITH Elevator , Elevator_Stops, Elevator_Direction
-        CALL Open_Door 
-        CALL Close_Door 
-    END IF    
+        CALL Open_Door
+        CALL Close_Door
+    END IF
     IF Floor_request_buttons Pressed THEN   '-- Une fois dans l'elevateur, Si un bouton d'etage est presse --'
             READ User_Stop
             CALL Add_Stop WITH Elevator , Elevator_Stops , User_Stop
-    END IF     
-    CALL Move_Elevator  WITH Elevator , Elevator_Stops, Elevator_Direction      
+    END IF
+    CALL Move_Elevator  WITH Elevator , Elevator_Stops, Elevator_Direction
 END WHILE
 
- 
