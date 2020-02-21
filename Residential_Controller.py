@@ -1,3 +1,4 @@
+
 def main():
     column1.ElevatorsList.append(E1)
     column1.ElevatorsList.append(E2)
@@ -27,32 +28,34 @@ class Column:
 
     def RequestElevator(self, Direction, Floor):
         print ("********** REQUEST ELEVATOR **********")
-        Best_Elevator = column1.ElevatorsList[0]
-        for i in ( 1 , len(column1.ElevatorsList)-1) :
+        MovingElevatorList = []
+        IdleElevatorList = []
+        for i in ( 0 , len(column1.ElevatorsList)-1) :
             E = column1.ElevatorsList[i]
-            if (E.Direction == Direction)or(E.Direction == "Idle"):                                 #  Meme Direction OU Elevator en Repos
-                if Direction== "Up" :
-                    if Floor == E.CurrentFloor :                                                    #  Elevator&User dans la meme position
-                        return E
-                    elif (Floor > E.CurrentFloor)and(Floor > Best_Elevator.CurrentFloor):           #  Elevator/Best_Elevator - User
-                        Best_Elevator = E
-                    elif (Floor < E.CurrentFloor)and(Floor < Best_Elevator.CurrentFloor):           #  User - Elevator/Best_Elevator
-                        Best_Elevator = E
-                    elif (Floor > E.CurrentFloor) and (Floor < Best_Elevator.CurrentFloor) :        #  Ordre: Elevator - User - Best_Elevator
-                        Best_Elevator = E
-                    return Best_Elevator
-                elif Direction == "Down":
-                    if (Floor == E.CurrentFloor):                                                   #  Elevator&User dans la meme position
-                        return E
-                    elif (Floor < E.CurrentFloor) and (Floor < Best_Elevator.CurrentFloor) :        #  User - Elevator/Best_Elevator
-                        Best_Elevator = E
-                    elif (Floor > E.CurrentFloor) and (Floor > Best_Elevator.CurrentFloor):         #  Elevator/Best_Elevator - User
-                        Best_Elevator = E
-                    elif (Floor < E.CurrentFloor) and (Floor > Best_Elevator.CurrentFloor):         #  Ordre: Best_Elevator - User - Elevator
-                        Best_Elevator = E
-                    return Best_Elevator
+            if (E.Direction == "Idle"):
+                if (E.CurrentFloor == Floor):
+                    return E
+                else:
+                    IdleElevatorList.append(E)
             else:
-                return Best_Elevator
+                MovingElevatorList.append(E)
+        if len(IdleElevatorList) > 0 :
+            BestElevator = IdleElevatorList[0]
+            GapBestElevator = abs(BestElevator.CurrentFloor - Floor)
+            for i in ( 0 , len(IdleElevatorList)-1):
+                E = IdleElevatorList[i]
+                Gap = abs(E.CurrentFloor - Floor)
+                if Gap < GapBestElevator :
+                    BestElevator = E
+            return BestElevator
+        elif len(MovingElevatorList) > 0 :
+            BestElevator = MovingElevatorList[0]
+            GapBestElevator = abs(BestElevator.RequestList.index(1)-BestElevator.CurrentFloor) + abs(BestElevator.RequestList.index(1)-Floor)
+            for i in ( 0 , len(MovingElevatorList)-1) :
+                Gap =  abs(E.RequestList.index(1)- E.CurrentFloor) + abs(E.RequestList.index(1)-Floor)
+                if Gap < GapBestElevator :
+                    BestElevator = E
+            return BestElevator
 
     def RequestFloor(self, Elevator, RequestedFloor):
         print("----------- REQUESTED FLOOR = ",RequestedFloor+1," --------------")

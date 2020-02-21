@@ -36,45 +36,47 @@ class Column{
         }
     }
 
-    RequestElevator (Direction, Floor){
-        console.log ("********** REQUEST ELEVATOR **********");
-        let Best_Elevator = column1.ElevatorsList[0];
-        for (let i=1 ; i<(column1.ElevatorsList.length); i++) {
+    RequestElevator(Direction, Floor){
+        console.log ("********** REQUEST ELEVATOR **********")
+        let MovingElevatorList = [];
+        let IdleElevatorList = [];
+        for (let i = 0 ; i <= column1.ElevatorsList.length -1; i++ )  {
             let E = column1.ElevatorsList[i];
-            if ( (E.Direction == Direction) || (E.Direction == "Idle") ) {                                  //  Meme Direction OU Elevator en Repos
-                if (Direction== "Up") {
-                    if (Floor == E.CurrentFloor) {                                                          //  Elevator&User dans la meme position
-                        return E;
-                    }
-                    else if ((Floor > E.CurrentFloor) && (Floor > Best_Elevator.CurrentFloor)){             //  Elevator/Best_Elevator - User
-                        Best_Elevator = E;
-                    }
-                    else if ((Floor < E.CurrentFloor) && (Floor < Best_Elevator.CurrentFloor)){             //  User - Elevator/Best_Elevator
-                        Best_Elevator = E;
-                    }
-                    else if ((Floor > E.CurrentFloor)  &&  (Floor < Best_Elevator.CurrentFloor)){           //  Ordre: Elevator - User - Best_Elevator
-                        Best_Elevator = E;
-                    }
-                    return Best_Elevator;
+            if (E.Direction == "Idle"){
+                if (E.CurrentFloor == Floor){
+                    return E;
                 }
-                else if (Direction == "Down"){
-                    if (Floor == E.CurrentFloor){                                                          //  Elevator&User dans la meme position
-                        return E;
+                    else {
+                        IdleElevatorList.push(E);
                     }
-                    else if ((Floor < E.CurrentFloor)  &&  (Floor < Best_Elevator.CurrentFloor)) {         //  User - Elevator/Best_Elevator
-                        Best_Elevator = E;
-                    }
-                    else if ((Floor > E.CurrentFloor)  &&  (Floor > Best_Elevator.CurrentFloor)){          //  Elevator/Best_Elevator - User
-                        Best_Elevator = E;
-                    }
-                    else if ((Floor < E.CurrentFloor)  &&  (Floor > Best_Elevator.CurrentFloor)){          //  Ordre: Best_Elevator - User - Elevator
-                        Best_Elevator = E;
-                    }
-                    return Best_Elevator;
+            }
+                else if (E.Direction != "Idle") {
+                    MovingElevatorList.push(E);
+                }
+        }
+        if (IdleElevatorList.length > 0 ){
+            let BestElevator = IdleElevatorList[0];
+            let GapBestElevator = Math.abs(BestElevator.CurrentFloor - Floor);
+            for (let i = 0; i <= IdleElevatorList.length -1; i++){
+                let E = IdleElevatorList[i];
+                let Gap = Math.abs(E.CurrentFloor - Floor);
+                if (Gap < GapBestElevator) {
+                    BestElevator = E
                 }
             }
+            return BestElevator;
         }
-        return Best_Elevator;
+        else if ( MovingElevatorList.length > 0 ) {
+            let BestElevator = MovingElevatorList[0];
+            let GapBestElevator = Math.abs(BestElevator.RequestList.index(1)-BestElevator.CurrentFloor) + Math.abs(BestElevator.RequestList.index(1)-Floor);
+            for (let i=0; i <= MovingElevatorList.length -1 ; i++) {
+                let Gap =  Math.abs(E.RequestList.index(1)- E.CurrentFloor) + Math.abs(E.RequestList.index(1)-Floor);
+                if (Gap < GapBestElevator) {
+                    BestElevator = E
+                }
+            }
+            return BestElevator;
+        }
     }
 
     RequestFloor(E, RequestedFloor){
