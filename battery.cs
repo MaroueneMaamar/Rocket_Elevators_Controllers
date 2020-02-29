@@ -151,7 +151,7 @@ namespace Rocket_Elevators_Controllers
                 //Console.WriteLine("Direction = "+E.Direction +" CurrentFloor = " + E.ElevatorCurrentFloor + " NextStop =" + E.ElevatorNextStop);
                 Console.WriteLine("|  Gap = " + (Math.Abs(E.ElevatorCurrentFloor - E.ElevatorNextStop) + Math.Abs(E.ElevatorNextStop - 1)));
             }
-            // Selection du BestElevator : soit le plus proche dans les IdleElevators  sinon dans les MovingElevators
+
             if (this.IdleElevators.Count > 0)
             {
                 this.BestElevator = this.IdleElevators.OrderBy(E => Math.Abs(E.ElevatorCurrentFloor - 1)).First();
